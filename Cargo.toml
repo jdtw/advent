@@ -1,0 +1,8 @@
+[workspace]
+
+members = [
+    "input",
+    "aoc2020",
+    "aoc2021",
+    "aoc2022",
+]
