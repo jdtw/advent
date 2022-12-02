@@ -8,6 +8,7 @@ fn main() {
     let days: Vec<fn()> = vec![
         || panic!("There is no day zero!"),
         days::day1::solution,
+        days::day2::solution,
         // NEXT SOLUTION
     ];
 
