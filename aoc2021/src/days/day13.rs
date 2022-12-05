@@ -67,7 +67,7 @@ impl FromStr for Instructions {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut points = HashSet::new();
         let mut lines = s.lines();
-        while let Some(l) = lines.next() {
+        for l in lines.by_ref() {
             if l.is_empty() {
                 break;
             }

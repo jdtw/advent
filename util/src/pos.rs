@@ -50,7 +50,7 @@ where
                     .to_digit(10)
                     .ok_or_else(|| anyhow!("couldn't parse digit"))?;
                 let d = T::try_from(d)?;
-                map.insert(Pos(x as i64, y as i64), d.into());
+                map.insert(Pos(x as i64, y as i64), d);
             }
         }
         Ok(DigitGrid(map))

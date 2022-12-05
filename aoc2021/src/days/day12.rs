@@ -71,7 +71,7 @@ impl<'graph> State<'graph> {
             }
             Some(cave)
         } else {
-            self.second.clone()
+            self.second
         };
 
         let mut path = self.path.clone();
