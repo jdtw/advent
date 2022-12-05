@@ -2,6 +2,7 @@
 
 members = [
     "input",
+    "util",
     "aoc2020",
     "aoc2021",
     "aoc2022",
