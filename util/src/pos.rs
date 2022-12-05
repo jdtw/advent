@@ -1,6 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
     fmt::Display,
+    ops::{Add, AddAssign},
     str::FromStr,
 };
 
@@ -84,6 +85,20 @@ impl Display for Pos {
     }
 }
 
+impl Add for Pos {
+    type Output = Pos;
+    fn add(self, Pos(dx, dy): Self) -> Self::Output {
+        Pos(self.0 + dx, self.1 + dy)
+    }
+}
+
+impl AddAssign for Pos {
+    fn add_assign(&mut self, Pos(dx, dy): Self) {
+        self.0 += dx;
+        self.1 += dy;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -97,5 +112,10 @@ mod tests {
     #[test]
     fn test_distance() {
         assert_eq!(Pos(-1, -1).distance(&Pos(1, 1)), 4);
+    }
+
+    #[test]
+    fn test_addition() {
+        assert_eq!(Pos(-100, 200) + Pos(100, -200), Pos(0, 0));
     }
 }
