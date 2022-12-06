@@ -1,23 +1,38 @@
 use std::{fmt::Display, ops::Add, str::FromStr};
 
-const INPUT: &str = "input/day18_test2.txt";
+const INPUT: &str = "input/day18.txt";
 
 pub fn solution() {
     let numbers: Vec<Number> = input::parse_lines(INPUT);
     let sum: Number = numbers
+        .clone()
         .into_iter()
-        .reduce(|acc, num| {
-            let sum = acc.clone() + num.clone();
-            println!("{} +\n{} =\n{}\n", acc, num, sum);
-            sum
-        })
+        .reduce(|acc, num| acc + num)
         .unwrap();
-    println!("{}", sum);
     let pair = Pair::from(sum);
     let part1 = pair.magnitude();
     println!("Part1: {}", part1);
+
+    let mut part2 = 0;
+    for (i, n) in numbers.iter().enumerate() {
+        for (j, m) in numbers.iter().enumerate() {
+            if i == j {
+                continue;
+            }
+            let sum: Number = n.clone() + m.clone();
+            let mag = Pair::from(sum).magnitude();
+            if mag > part2 {
+                part2 = mag;
+            }
+        }
+    }
+    println!("Part2: {}", part2);
 }
 
+/// Number is an intermediate representation. I can't reason about pairs,
+/// but I can do the adding, exploding, and spliting with this IR.
+#[derive(Debug, Clone)]
+struct Number(Vec<Atom>);
 #[derive(Debug, Clone, Copy)]
 enum Atom {
     Open,
@@ -25,51 +40,29 @@ enum Atom {
     Num(u64),
 }
 
-#[derive(Debug, Clone)]
-struct Number(Vec<Atom>);
-
-enum Step {
-    Modified(Number),
-    Reduced(Number),
+/// Pair represents the nested structure of the actual number.
+#[derive(Debug, Default, Clone)]
+struct Pair {
+    store: Vec<Item>,
+    pair: (usize, usize),
 }
-
 #[derive(Debug, Clone, Copy)]
 enum Item {
     Num(u64),
     Pair(usize, usize),
 }
 
-impl From<Number> for Pair {
-    fn from(Number(n): Number) -> Self {
-        let mut pair = Pair::default();
-        let (Item::Pair(first, second), atoms) = pair.parse_item(&n) else {
-            panic!("expected a pair!!");
-        };
-        assert!(atoms.is_empty());
-        pair.pair = (first, second);
-        pair
-    }
-}
-
-#[derive(Debug, Default, Clone)]
-struct Pair {
-    store: Vec<Item>,
-    pair: (usize, usize),
-}
-
 impl<'a> Pair {
     fn parse_item(&mut self, atoms: &'a [Atom]) -> (Item, &'a [Atom]) {
         match &atoms[0] {
-            Atom::Num(n) => {
-                return (Item::Num(*n), &atoms[1..]);
-            }
+            Atom::Num(n) => (Item::Num(*n), &atoms[1..]),
             Atom::Open => {
                 let (first, atoms) = self.parse_item(&atoms[1..]);
-                let (second, atoms) = self.parse_item(&atoms);
-                return (
+                let (second, atoms) = self.parse_item(atoms);
+                (
                     Item::Pair(self.store(first), self.store(second)),
                     &atoms[1..],
-                );
+                )
             }
             _ => unreachable!(),
         }
@@ -100,28 +93,32 @@ impl<'a> Pair {
     }
 }
 
+impl From<Number> for Pair {
+    fn from(Number(n): Number) -> Self {
+        let mut pair = Pair::default();
+        let (Item::Pair(first, second), atoms) = pair.parse_item(&n) else {
+            panic!("expected a pair!!");
+        };
+        assert!(atoms.is_empty());
+        pair.pair = (first, second);
+        pair
+    }
+}
+
 impl Number {
-    fn reduce(self) -> Self {
-        let mut n = self;
-        println!("{}", n);
+    fn reduce(&mut self) {
         loop {
-            match n.step() {
-                Step::Reduced(n) => {
-                    println!("{}", n);
-                    return n;
-                }
-                Step::Modified(modified) => {
-                    println!("{}", modified);
-                    n = modified;
-                }
+            while self.explode_once() {}
+            if !self.split_once() {
+                break;
             }
         }
     }
-    fn step(self) -> Step {
+    fn explode_once(&mut self) -> bool {
         let mut stack = Vec::new();
         let mut prev: Option<usize> = None;
         let mut open_count = 0;
-        let mut items = self.0.into_iter();
+        let mut items = self.0.iter();
         while let Some(i) = items.next() {
             match i {
                 Atom::Open => {
@@ -148,17 +145,18 @@ impl Number {
                         stack.push(Atom::Num(0));
                         let mut explode_rhs = Some(rhs);
 
+                        // And now the rest of the list, incrementing the next number we find.
                         for i in items.by_ref() {
                             match i {
                                 Atom::Num(n) if explode_rhs.is_some() => stack
                                     .push(Atom::Num(
                                         n + explode_rhs.take().unwrap(),
                                     )),
-                                _ => stack.push(i),
+                                _ => stack.push(*i),
                             }
                         }
-                        println!("explode!");
-                        return Step::Modified(Number(stack));
+                        self.0 = stack;
+                        return true;
                     }
                     stack.push(Atom::Open);
                 }
@@ -166,7 +164,21 @@ impl Number {
                     open_count -= 1;
                     stack.push(Atom::Close);
                 }
-                Atom::Num(n) if n > 9 => {
+                Atom::Num(n) => {
+                    prev = Some(stack.len());
+                    stack.push(Atom::Num(*n));
+                }
+            }
+        }
+        false
+    }
+
+    fn split_once(&mut self) -> bool {
+        let mut stack = Vec::new();
+        let mut items = self.0.iter();
+        while let Some(i) = items.next() {
+            match i {
+                Atom::Num(n) if n > &9 => {
                     let (lhs, rhs) = (n / 2, (n + 1) / 2);
                     stack.extend_from_slice(&[
                         Atom::Open,
@@ -175,18 +187,17 @@ impl Number {
                         Atom::Close,
                     ]);
                     for i in items.by_ref() {
-                        stack.push(i);
+                        stack.push(*i);
                     }
-                    println!("split");
-                    return Step::Modified(Number(stack));
+                    self.0 = stack;
+                    return true;
                 }
-                Atom::Num(n) => {
-                    prev = Some(stack.len());
-                    stack.push(Atom::Num(n));
+                _ => {
+                    stack.push(*i);
                 }
             }
         }
-        Step::Reduced(Number(stack))
+        false
     }
 }
 
@@ -197,7 +208,9 @@ impl Add for Number {
         output.extend(self.0.into_iter());
         output.extend(rhs.0.into_iter());
         output.push(Atom::Close);
-        Number(output).reduce()
+        let mut n = Number(output);
+        n.reduce();
+        n
     }
 }
 
@@ -286,29 +299,22 @@ mod tests {
 
     #[test]
     fn test_explode() {
-        let n = Number::from_str("[[[[[9,8],1],2],3],4]").unwrap();
-        let Step::Modified(n) = n.step() else {
-            panic!("expected explosion!");
-        };
+        let mut n = Number::from_str("[[[[[9,8],1],2],3],4]").unwrap();
+        n.explode_once();
         assert_eq!(format!("{}", n), "[[[[0,9],2],3],4]");
 
-        let n = Number::from_str("[7,[6,[5,[4,[3,2]]]]]").unwrap();
-        let Step::Modified(n) = n.step() else {
-            panic!("expected explosion!");
-        };
+        let mut n = Number::from_str("[7,[6,[5,[4,[3,2]]]]]").unwrap();
+        n.explode_once();
         assert_eq!(format!("{}", n), "[7,[6,[5,[7,0]]]]");
 
-        let n =
+        let mut n =
             Number::from_str("[[3,[2,[1,[7,3]]]],[6,[5,[4,[3,2]]]]]").unwrap();
-        let Step::Modified(n) = n.step() else {
-            panic!("expected explosion!");
-        };
+        n.explode_once();
         assert_eq!(format!("{}", n), "[[3,[2,[8,0]]],[9,[5,[4,[3,2]]]]]");
 
-        let n = Number::from_str("[[3,[2,[8,0]]],[9,[5,[4,[3,2]]]]]").unwrap();
-        let Step::Modified(n) = n.step() else {
-            panic!("expected explosion!");
-        };
+        let mut n =
+            Number::from_str("[[3,[2,[8,0]]],[9,[5,[4,[3,2]]]]]").unwrap();
+        n.explode_once();
         assert_eq!(format!("{}", n), "[[3,[2,[8,0]]],[9,[5,[7,0]]]]");
     }
 
