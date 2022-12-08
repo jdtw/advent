@@ -115,6 +115,17 @@ where
     v
 }
 
+pub fn split2<T, U>(s: &str, delimiter: &str) -> (T, U)
+where
+    T: FromStr,
+    T::Err: Debug,
+    U: FromStr,
+    U::Err: Debug,
+{
+    let (t, u) = s.split_once(delimiter).unwrap();
+    (T::from_str(t).unwrap(), U::from_str(u).unwrap())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -141,5 +152,10 @@ mod tests {
     fn test_empty_csv_vec() {
         let CsvVec::<i32>(v) = "".parse().unwrap();
         assert!(v.is_empty());
+    }
+
+    #[test]
+    fn test_split2() {
+        assert_eq!((1, -2), split2::<u8, i8>("1,-2", ","));
     }
 }
