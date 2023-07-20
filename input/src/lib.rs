@@ -126,6 +126,14 @@ where
     (T::from_str(t).unwrap(), U::from_str(u).unwrap())
 }
 
+pub fn split<T>(s: &str, delimiter: &str) -> Vec<T>
+where
+    T: FromStr,
+    T::Err: Debug,
+{
+    s.split(delimiter).map(|i| i.parse().unwrap()).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
