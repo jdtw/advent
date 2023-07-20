@@ -28,7 +28,6 @@ where
     I::from_str(&s).unwrap()
 }
 
-#[cfg(test)]
 pub fn parse_str_lines<I>(s: &str) -> Vec<I>
 where
     I: FromStr,
