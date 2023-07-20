@@ -19,6 +19,7 @@ fn main() {
         days::day10::solution,
         days::day11::solution,
         days::day12::solution,
+        days::day13::solution,
         // NEXT SOLUTION
     ];
 
