@@ -1,7 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
     fmt::Display,
-    ops::{Add, AddAssign},
+    ops::{Add, AddAssign, Sub, SubAssign},
     str::FromStr,
 };
 
@@ -30,6 +30,12 @@ impl Pos {
             Pos(x, y - 1),
             Pos(x + 1, y - 1),
         ]
+    }
+    pub fn abs_diff(&self, Pos(dx, dy): Pos) -> Pos {
+        Pos(
+            self.0.abs_diff(dx).try_into().unwrap(),
+            self.1.abs_diff(dy).try_into().unwrap(),
+        )
     }
     pub fn distance(&self, other: &Pos) -> u64 {
         self.0.abs_diff(other.0) + self.1.abs_diff(other.1)
@@ -150,6 +156,20 @@ impl AddAssign for Pos {
     fn add_assign(&mut self, Pos(dx, dy): Self) {
         self.0 += dx;
         self.1 += dy;
+    }
+}
+
+impl Sub for Pos {
+    type Output = Pos;
+    fn sub(self, Pos(dx, dy): Self) -> Self::Output {
+        Pos(self.0 - dx, self.1 - dy)
+    }
+}
+
+impl SubAssign for Pos {
+    fn sub_assign(&mut self, Pos(dx, dy): Self) {
+        self.0 -= dx;
+        self.1 -= dy;
     }
 }
 
